@@ -1,0 +1,1177 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>日常記帳本 - Personal Expense Tracker</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap');
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-200">
+
+    <!-- 主頁面容器 -->
+    <div class="max-w-5xl mx-auto px-4 py-6 md:py-10">
+
+        <!-- 頂部導覽列 -->
+        <header class="flex justify-between items-center mb-8">
+            <div class="flex items-center space-x-3">
+                <div class="bg-brand-500 text-white p-2.5 rounded-2xl shadow-lg shadow-brand-500/30">
+                    <i data-lucide="wallet" class="w-7 h-7"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-2xl font-bold tracking-tight">日常記帳本</h1>
+                        <!-- 雲端同步狀態標籤 -->
+                        <span id="syncStatusBadge" class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400">
+                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span id="syncStatusText">雲端連線中</span>
+                        </span>
+                    </div>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">理財第一步，掌握每一筆開銷</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-2">
+                <!-- Google Sheets 雲端同步按鈕 -->
+                <button onclick="openSyncModal()" title="Google 試算表雲端同步設定" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-indigo-600 dark:text-indigo-400 relative">
+                    <i data-lucide="cloud-cog" class="w-5 h-5"></i>
+                </button>
+                <!-- 備份資料按鈕 -->
+                <button onclick="exportData()" title="匯出資料 (JSON)" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <i data-lucide="download" class="w-5 h-5"></i>
+                </button>
+                <!-- 匯出 CSV -->
+                <button onclick="exportCSV()" title="匯出報表 (CSV)" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                </button>
+                <!-- 暗黑模式開關 -->
+                <button id="themeToggle" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+                    <i data-lucide="moon" id="themeIcon" class="w-5 h-5"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- 總覽卡片區塊 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <!-- 淨資產/結餘 -->
+            <div class="bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-2xl p-5 shadow-lg shadow-brand-600/20 relative overflow-hidden">
+                <div class="absolute -right-4 -bottom-4 opacity-10">
+                    <i data-lucide="coins" class="w-32 h-32"></i>
+                </div>
+                <div class="text-xs text-brand-100 font-medium mb-1">當前累積結餘</div>
+                <div class="text-3xl font-extrabold tracking-tight" id="totalBalance">HK$0</div>
+                <div class="mt-4 flex items-center text-xs text-brand-100">
+                    <i data-lucide="calendar" class="w-4 h-4 mr-1"></i>
+                    <span id="currentMonthYear">-- 年 -- 月</span>
+                </div>
+            </div>
+
+            <!-- 本月總收入 -->
+            <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">本月總收入</span>
+                    <span class="p-1.5 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 rounded-lg">
+                        <i data-lucide="trending-up" class="w-4 h-4"></i>
+                    </span>
+                </div>
+                <div class="text-2xl font-bold text-emerald-600 dark:text-emerald-400" id="monthIncome">+HK$0</div>
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">持續累積額外收入</p>
+            </div>
+
+            <!-- 本月總支出 -->
+            <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm">
+                <div class="flex justify-between items-start mb-2">
+                    <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">本月總支出</span>
+                    <span class="p-1.5 bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-lg">
+                        <i data-lucide="trending-down" class="w-4 h-4"></i>
+                    </span>
+                </div>
+                <div class="text-2xl font-bold text-rose-600 dark:text-rose-400" id="monthExpense">-HK$0</div>
+                <!-- 每月預算進度條 -->
+                <div class="mt-3">
+                    <div class="flex justify-between text-xs mb-1">
+                        <span class="text-slate-400">月預算使用率</span>
+                        <span class="font-medium" id="budgetPercent">0%</span>
+                    </div>
+                    <div class="w-full bg-slate-100 dark:bg-slate-700 rounded-full h-1.5 overflow-hidden">
+                        <div id="budgetBar" class="bg-rose-500 h-1.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 主要內容分頁/布局區 -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+            <!-- 左側/上方：記帳表單與圖表 (5 欄) -->
+            <div class="lg:col-span-5 space-y-6">
+
+                <!-- 1. 新增交易表單 -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm relative">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="text-lg font-bold flex items-center">
+                            <i data-lucide="plus-circle" class="w-5 h-5 mr-2 text-brand-500"></i>
+                            新增記帳紀錄
+                        </h2>
+                        <!-- AI 辨識收據按鈕 -->
+                        <button type="button" onclick="triggerReceiptUpload()" class="flex items-center space-x-1.5 px-3 py-1.5 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white rounded-xl text-xs font-medium shadow-md shadow-indigo-500/20 transition hover:scale-105 active:scale-95">
+                            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                            <span>AI 中英文收據辨識</span>
+                        </button>
+                    </div>
+
+                    <!-- 隱藏的檔案上傳輸入框 -->
+                    <input type="file" id="receiptFileInput" accept="image/*" capture="environment" class="hidden" onchange="handleReceiptUpload(event)">
+
+                    <!-- AI 掃描辨識中的全覆蓋遮罩 -->
+                    <div id="aiScanOverlay" class="hidden absolute inset-0 bg-white/95 dark:bg-slate-800/95 rounded-2xl z-20 flex flex-col items-center justify-center p-6 text-center backdrop-blur-sm transition-all duration-300">
+                        <div class="relative mb-4">
+                            <img id="receiptPreview" src="" class="w-24 h-32 object-cover rounded-xl border border-slate-200 dark:border-slate-700 shadow-md">
+                            <div class="absolute inset-0 bg-indigo-500/10 rounded-xl flex items-center justify-center backdrop-blur-[1px]">
+                                <i data-lucide="sparkles" class="w-8 h-8 text-indigo-500 animate-spin"></i>
+                            </div>
+                        </div>
+                        <p class="font-bold text-sm text-slate-800 dark:text-slate-100 mb-1">AI 正在辨識中英文收據...</p>
+                        <p class="text-xs text-slate-400">自動提取金額、日期、分類、子項目與店家名稱</p>
+                    </div>
+                    
+                    <form id="transactionForm" class="space-y-4">
+                        <!-- 收支類型切換 -->
+                        <div class="grid grid-cols-2 gap-2 p-1 bg-slate-100 dark:bg-slate-700/50 rounded-xl text-sm font-medium">
+                            <button type="button" id="btnExpense" onclick="setType('expense')" class="py-2 rounded-lg text-center transition bg-white dark:bg-slate-800 text-rose-600 shadow-sm">
+                                支出 (-)
+                            </button>
+                            <button type="button" id="btnIncome" onclick="setType('income')" class="py-2 rounded-lg text-center transition text-slate-500 dark:text-slate-400">
+                                收入 (+)
+                            </button>
+                        </div>
+
+                        <!-- 金額 -->
+                        <div>
+                            <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">金額 (HK$)</label>
+                            <div class="relative">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-sm">HK$</span>
+                                <input type="number" id="amountInput" required step="any" placeholder="0" class="w-full pl-12 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 transition text-lg font-bold">
+                            </div>
+                        </div>
+
+                        <!-- 類別與日期 (並排) -->
+                        <div class="grid grid-cols-2 gap-3">
+                            <div>
+                                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">分類類別</label>
+                                <select id="categorySelect" onchange="handleCategoryChange()" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 transition text-sm">
+                                    <!-- 動態由 JavaScript 生成類別 -->
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">日期</label>
+                                <input type="date" id="dateInput" required class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 transition text-sm">
+                            </div>
+                        </div>
+
+                        <!-- 動態子類別選單 (適用於餐飲飲食、交通出行、網上消費) -->
+                        <div id="subcategoryContainer" class="hidden">
+                            <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1" id="subcategoryLabel">子分類細項</label>
+                            <select id="subcategorySelect" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 transition text-sm">
+                                <!-- 動態填入子分類 -->
+                            </select>
+                        </div>
+
+                        <!-- 備註說明 -->
+                        <div>
+                            <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">備註 / 說明 (選填)</label>
+                            <input type="text" id="noteInput" placeholder="例如：麥當勞午餐、搭的士" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 transition text-sm">
+                        </div>
+
+                        <!-- 提交按鈕 -->
+                        <button type="submit" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-medium py-3 rounded-xl shadow-lg shadow-brand-500/25 transition flex items-center justify-center space-x-2">
+                            <i data-lucide="check" class="w-5 h-5"></i>
+                            <span>儲存紀錄 (自動同步)</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- 2. 圖表分析卡片 -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm">
+                    <h2 class="text-lg font-bold mb-4 flex items-center">
+                        <i data-lucide="pie-chart" class="w-5 h-5 mr-2 text-brand-500"></i>
+                        本月支出分類統計
+                    </h2>
+                    <div class="relative h-56 flex items-center justify-center">
+                        <canvas id="categoryChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 3. 設定預算模組 -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700/50 shadow-sm">
+                    <div class="flex justify-between items-center">
+                        <div>
+                            <span class="text-sm font-bold block">每月預算上限</span>
+                            <span class="text-xs text-slate-400" id="currentBudgetLabel">當前設定：HK$20,000</span>
+                        </div>
+                        <button onclick="promptSetBudget()" class="text-xs px-3 py-1.5 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-lg transition font-medium">
+                            修改預算
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- 右側/下方：明細清單與過濾搜尋 (7 欄) -->
+            <div class="lg:col-span-7 space-y-6">
+
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm">
+                    <!-- 標題與搜尋欄 -->
+                    <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
+                        <h2 class="text-lg font-bold flex items-center">
+                            <i data-lucide="list" class="w-5 h-5 mr-2 text-brand-500"></i>
+                            交易明細歷史
+                        </h2>
+                        
+                        <!-- 搜尋框 -->
+                        <div class="relative w-full sm:w-48">
+                            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-3 text-slate-400"></i>
+                            <input type="text" id="searchInput" oninput="render()" placeholder="搜尋備註、分類或子類..." class="w-full pl-9 pr-3 py-2 rounded-xl text-xs border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500">
+                        </div>
+                    </div>
+
+                    <!-- 快速過濾標籤列 -->
+                    <div class="flex items-center space-x-2 overflow-x-auto pb-2 mb-4 text-xs hide-scrollbar" id="filterTags">
+                        <button onclick="setFilter('all')" id="filter-all" class="px-3 py-1.5 rounded-xl border border-brand-500 bg-brand-500 text-white font-medium shrink-0">全部</button>
+                        <button onclick="setFilter('expense')" id="filter-expense" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300 shrink-0">僅支出</button>
+                        <button onclick="setFilter('income')" id="filter-income" class="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300 shrink-0">僅收入</button>
+                    </div>
+
+                    <!-- 交易列表內容 -->
+                    <div class="space-y-3 max-h-[500px] overflow-y-auto pr-1 hide-scrollbar" id="transactionList">
+                        <!-- JS 動態生成項目 -->
+                    </div>
+
+                    <!-- 空資料狀態 -->
+                    <div id="emptyState" class="hidden text-center py-12">
+                        <i data-lucide="receipt" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3"></i>
+                        <p class="text-slate-500 dark:text-slate-400 text-sm">目前尚無相關的記帳紀錄</p>
+                        <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">請嘗試從左側新增第一筆帳目</p>
+                    </div>
+                </div>
+
+                <!-- 趨勢圖表 -->
+                <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm">
+                    <h2 class="text-lg font-bold mb-4 flex items-center">
+                        <i data-lucide="line-chart" class="w-5 h-5 mr-2 text-brand-500"></i>
+                        近期 7 天收支趨勢
+                    </h2>
+                    <div class="relative h-48">
+                        <canvas id="trendChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- 訊息提示模組 (Toast) -->
+    <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-4 py-3 rounded-xl shadow-xl text-sm flex items-center space-x-2 z-50 pointer-events-none">
+        <i data-lucide="info" class="w-4 h-4 text-brand-500"></i>
+        <span id="toastMsg">提示訊息</span>
+    </div>
+
+    <!-- Google 試算表同步設定彈窗 -->
+    <div id="syncModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 space-y-5">
+            <div class="flex justify-between items-center border-b dark:border-slate-700 pb-3">
+                <h3 class="text-lg font-bold flex items-center text-slate-800 dark:text-slate-100">
+                    <i data-lucide="database" class="w-5 h-5 mr-2 text-indigo-500"></i>
+                    Google 試算表雲端同步
+                </h3>
+                <button onclick="closeSyncModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                <label class="block text-xs font-medium text-slate-500 dark:text-slate-400">
+                    Google Apps Script Web App URL
+                </label>
+                <input type="url" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-mono">
+                <p class="text-[11px] text-slate-400 leading-relaxed">
+                    已預設帶入您的 Google Apps Script URL。每次載入頁面或新增/刪除紀錄時，系統皆會自動同步至試算表！
+                </p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3 pt-2">
+                <button onclick="syncToCloud(false)" class="flex items-center justify-center space-x-2 py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-medium transition shadow-md shadow-indigo-500/20">
+                    <i data-lucide="cloud-upload" class="w-4 h-4"></i>
+                    <span>手動上傳至雲端</span>
+                </button>
+                <button onclick="syncFromCloud(false)" class="flex items-center justify-center space-x-2 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-medium transition shadow-md shadow-emerald-500/20">
+                    <i data-lucide="cloud-download" class="w-4 h-4"></i>
+                    <span>從雲端下載覆蓋</span>
+                </button>
+            </div>
+            <button onclick="saveGasUrl()" class="w-full py-2 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-medium transition">
+                儲存網址設定
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // 預設 Google Apps Script API 網址
+        const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyi0cXga8giVS7J2vMjhouzluhitibOxTFTDCRgjFYv74O8Z74O5W0AbjF_IpwYkEauSQ/exec';
+
+        function getGasUrl() {
+            return localStorage.getItem('gas_script_url') || DEFAULT_GAS_URL;
+        }
+
+        // 更新頂部雲端同步狀態標籤
+        function updateSyncBadge(status, text) {
+            const badge = document.getElementById('syncStatusBadge');
+            const textEl = document.getElementById('syncStatusText');
+            textEl.textContent = text;
+
+            if (status === 'syncing') {
+                badge.className = "inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400";
+            } else if (status === 'success') {
+                badge.className = "inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400";
+            } else if (status === 'error') {
+                badge.className = "inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-400";
+            }
+        }
+
+        // --- 雲端試算表同步邏輯 ---
+        function openSyncModal() {
+            document.getElementById('gasUrlInput').value = getGasUrl();
+            document.getElementById('syncModal').classList.remove('hidden');
+        }
+
+        function closeSyncModal() {
+            document.getElementById('syncModal').classList.add('hidden');
+        }
+
+        function saveGasUrl() {
+            const url = document.getElementById('gasUrlInput').value.trim();
+            localStorage.setItem('gas_script_url', url || DEFAULT_GAS_URL);
+            showToast('已儲存 Google 試算表網址設定');
+            closeSyncModal();
+        }
+
+        // 上傳本機資料至 Google 試算表 (支援自動背景同步/靜默上傳)
+        async function syncToCloud(isSilent = false) {
+            const url = getGasUrl();
+            if (!url) return;
+
+            if (!isSilent) showToast('正在同步資料至 Google 試算表...');
+            updateSyncBadge('syncing', '雲端同步中...');
+
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors', // 處理 GAS CORS 重導向限制
+                    headers: { 'Content-Type': 'text/plain' },
+                    body: JSON.stringify(transactions)
+                });
+
+                updateSyncBadge('success', '資料庫已同步');
+                if (!isSilent) {
+                    showToast('✨ 已成功同步上傳至 Google 試算表！');
+                    closeSyncModal();
+                }
+            } catch (err) {
+                console.error('Cloud Sync Error:', err);
+                updateSyncBadge('error', '同步失敗');
+                if (!isSilent) showToast('同步失敗，請檢查網路連接');
+            }
+        }
+
+        // 從 Google 試算表下載資料覆蓋本機
+        async function syncFromCloud(isSilent = false) {
+            const url = getGasUrl();
+            if (!url) return;
+
+            if (!isSilent) showToast('正在從 Google 試算表讀取最新資料...');
+            updateSyncBadge('syncing', '雲端讀取中...');
+
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error('Network error');
+                const cloudData = await response.json();
+
+                if (Array.isArray(cloudData)) {
+                    transactions = cloudData;
+                    saveData(false); // 避免觸發重複上傳迴圈
+                    render();
+                    updateSyncBadge('success', '資料庫已同步');
+                    if (!isSilent) {
+                        showToast('✨ 已成功同步最新試算表資料！');
+                        closeSyncModal();
+                    }
+                } else {
+                    updateSyncBadge('error', '格式錯誤');
+                    if (!isSilent) showToast('下載失敗：資料格式不符');
+                }
+            } catch (err) {
+                console.error('Cloud Download Error:', err);
+                updateSyncBadge('error', '無法連線');
+                if (!isSilent) showToast('下載失敗，請確認 Apps Script 部署存取權限');
+            }
+        }
+
+        // --- 預設分類與圖示圖例 (包含子分類選單) ---
+        const CATEGORIES = {
+            expense: [
+                { 
+                    name: '餐飲飲食', 
+                    icon: 'utensils', 
+                    color: '#f43f5e',
+                    subcategories: ['堂食', '外賣自取', 'Keeta', 'FoodPanda', '其他飲食'] 
+                },
+                { 
+                    name: '交通出行', 
+                    icon: 'car', 
+                    color: '#0284c7',
+                    subcategories: ['八達通', '的士', '巴士/地鐵', '私家車/加油', '其他交通']
+                },
+                { 
+                    name: '網上消費', 
+                    icon: 'globe', 
+                    color: '#8b5cf6',
+                    subcategories: ['HKTVmall', '淘寶/天貓', 'Amazon', '訂閱服務', '其他網購']
+                },
+                { name: '購物消費', icon: 'shopping-bag', color: '#a855f7' },
+                { name: '居家日常', icon: 'home', color: '#eab308' },
+                { name: '休閒娛樂', icon: 'gamepad-2', color: '#10b981' },
+                { name: '醫療健康', icon: 'heart-pulse', color: '#ec4899' },
+                { name: '其他支出', icon: 'more-horizontal', color: '#64748b' }
+            ],
+            income: [
+                { name: '薪資收入', icon: 'briefcase', color: '#10b981' },
+                { name: '投資理財', icon: 'trending-up', color: '#0284c7' },
+                { name: '副業兼職', icon: 'laptop', color: '#6366f1' },
+                { name: '獎金紅利', icon: 'gift', color: '#f59e0b' },
+                { name: '其他收入', icon: 'plus-circle', color: '#64748b' }
+            ]
+        };
+
+        // --- 應用程式狀態 ---
+        let transactions = JSON.parse(localStorage.getItem('my_transactions')) || [
+            { id: 1, type: 'expense', amount: 120, category: '餐飲飲食', subcategory: '堂食', note: '午餐牛肉麵', date: getFormattedDate(0) },
+            { id: 2, type: 'expense', amount: 65, category: '交通出行', subcategory: '八達通', note: '搭乘捷運', date: getFormattedDate(0) },
+            { id: 3, type: 'income', amount: 45000, category: '薪資收入', subcategory: '', note: '本月月薪', date: getFormattedDate(2) }
+        ];
+
+        let currentType = 'expense';
+        let currentFilter = 'all';
+        let monthlyBudget = Number(localStorage.getItem('my_budget')) || 20000;
+        let pieChartInstance = null;
+        let lineChartInstance = null;
+
+        // 協助函式：取得格式化日期字串 (YYYY-MM-DD)
+        function getFormattedDate(offsetDays = 0) {
+            const d = new Date();
+            d.setDate(d.getDate() - offsetDays);
+            return d.toISOString().split('T')[0];
+        }
+
+        // --- 初始化頁面 ---
+        document.addEventListener('DOMContentLoaded', () => {
+            // 初始化日期輸入框為今天
+            document.getElementById('dateInput').value = getFormattedDate(0);
+            
+            // 初始化暗黑模式
+            initTheme();
+
+            // 更新預算顯示
+            updateBudgetUI();
+
+            // 更新表單分類選項
+            updateCategoryOptions();
+
+            // 渲染列表與圖表
+            render();
+
+            // 每次載入/登入頁面時自動從 Google 試算表拉取最新數據
+            syncFromCloud(true);
+
+            // 表單提交事件處理
+            document.getElementById('transactionForm').addEventListener('submit', handleFormSubmit);
+
+            // 圖示初始化
+            lucide.createIcons();
+        });
+
+        // --- 收支切換按鈕處理 ---
+        function setType(type) {
+            currentType = type;
+            const btnExpense = document.getElementById('btnExpense');
+            const btnIncome = document.getElementById('btnIncome');
+
+            if (type === 'expense') {
+                btnExpense.className = "py-2 rounded-lg text-center transition bg-white dark:bg-slate-800 text-rose-600 shadow-sm font-bold";
+                btnIncome.className = "py-2 rounded-lg text-center transition text-slate-500 dark:text-slate-400";
+            } else {
+                btnIncome.className = "py-2 rounded-lg text-center transition bg-white dark:bg-slate-800 text-emerald-600 shadow-sm font-bold";
+                btnExpense.className = "py-2 rounded-lg text-center transition text-slate-500 dark:text-slate-400";
+            }
+
+            updateCategoryOptions();
+        }
+
+        // 更新分類選單與處理子選項顯隱
+        function updateCategoryOptions() {
+            const select = document.getElementById('categorySelect');
+            select.innerHTML = '';
+            CATEGORIES[currentType].forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.name;
+                opt.textContent = cat.name;
+                select.appendChild(opt);
+            });
+            handleCategoryChange();
+        }
+
+        // 當主分類切換時處理子分類顯示
+        function handleCategoryChange() {
+            const selectedCatName = document.getElementById('categorySelect').value;
+            const catObj = CATEGORIES[currentType].find(c => c.name === selectedCatName);
+            const subContainer = document.getElementById('subcategoryContainer');
+            const subSelect = document.getElementById('subcategorySelect');
+
+            if (catObj && catObj.subcategories && catObj.subcategories.length > 0) {
+                subSelect.innerHTML = '';
+                catObj.subcategories.forEach(sub => {
+                    const opt = document.createElement('option');
+                    opt.value = sub;
+                    opt.textContent = sub;
+                    subSelect.appendChild(opt);
+                });
+                subContainer.classList.remove('hidden');
+            } else {
+                subContainer.classList.add('hidden');
+                subSelect.innerHTML = '';
+            }
+        }
+
+        // --- 新增交易紀錄 ---
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const amount = parseFloat(document.getElementById('amountInput').value);
+            const category = document.getElementById('categorySelect').value;
+            const date = document.getElementById('dateInput').value;
+            const note = document.getElementById('noteInput').value.trim();
+
+            const subContainer = document.getElementById('subcategoryContainer');
+            const subcategory = !subContainer.classList.contains('hidden') 
+                ? document.getElementById('subcategorySelect').value 
+                : '';
+
+            if (isNaN(amount) || amount <= 0) {
+                showToast('請輸入有效的金額！');
+                return;
+            }
+
+            const newTransaction = {
+                id: Date.now(),
+                type: currentType,
+                amount: amount,
+                category: category,
+                subcategory: subcategory,
+                note: note || (subcategory ? `${category} (${subcategory})` : category),
+                date: date
+            };
+
+            transactions.unshift(newTransaction);
+            saveData(true); // 觸發自動上傳同步
+            render();
+
+            // 清空輸入框
+            document.getElementById('amountInput').value = '';
+            document.getElementById('noteInput').value = '';
+
+            showToast('記帳紀錄已新增並自動同步至資料庫！');
+        }
+
+        // --- 刪除紀錄 ---
+        function deleteTransaction(id) {
+            transactions = transactions.filter(t => t.id !== id);
+            saveData(true); // 觸發自動上傳同步
+            render();
+            showToast('紀錄已刪除並同步資料庫');
+        }
+
+        // --- AI 發票/收據辨識邏輯 (加強中英文辨識) ---
+        function triggerReceiptUpload() {
+            document.getElementById('receiptFileInput').click();
+        }
+
+        async function handleReceiptUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showToast('請選擇有效的圖片檔案！');
+                return;
+            }
+
+            const overlay = document.getElementById('aiScanOverlay');
+            const previewImg = document.getElementById('receiptPreview');
+            
+            // 讀取圖片預覽
+            const reader = new FileReader();
+            reader.onload = async (evt) => {
+                const base64DataWithMime = evt.target.result;
+                previewImg.src = base64DataWithMime;
+                overlay.classList.remove('hidden');
+
+                const base64Content = base64DataWithMime.split(',')[1];
+                const mimeType = file.type;
+
+                try {
+                    const result = await analyzeReceiptWithGemini(base64Content, mimeType);
+                    if (result) {
+                        // 切換為支出類型
+                        setType('expense');
+                        
+                        // 自動帶入辨識到的資料
+                        if (result.amount) document.getElementById('amountInput').value = result.amount;
+                        if (result.date) document.getElementById('dateInput').value = result.date;
+                        if (result.note) document.getElementById('noteInput').value = result.note;
+                        
+                        if (result.category) {
+                            const catSelect = document.getElementById('categorySelect');
+                            const exists = Array.from(catSelect.options).some(opt => opt.value === result.category);
+                            if (exists) {
+                                catSelect.value = result.category;
+                                handleCategoryChange();
+
+                                // 如果有識別出子類別，填入子類別
+                                if (result.subcategory) {
+                                    const subSelect = document.getElementById('subcategorySelect');
+                                    const subExists = Array.from(subSelect.options).some(opt => opt.value === result.subcategory);
+                                    if (subExists) {
+                                        subSelect.value = result.subcategory;
+                                    }
+                                }
+                            }
+                        }
+                        showToast('✨ AI 成功解析中英文收據！');
+                    } else {
+                        showToast('無法識別此收據，請手動輸入');
+                    }
+                } catch (err) {
+                    console.error('Receipt AI recognition error:', err);
+                    showToast('辨識失敗，請重試或手動填寫');
+                } finally {
+                    overlay.classList.add('hidden');
+                    e.target.value = ''; // 清空選擇狀態以利再次上傳
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 呼叫 Gemini API 進行中英文發票/收據多模態識別
+        async function analyzeReceiptWithGemini(base64Data, mimeType) {
+            const prompt = `你是一個專業的財務收據/發票 OCR 辨識助手。請仔細分析這張收據或發票圖片（支援繁體中文、簡體中文與英文，例如：麥當勞, McDonald's, 7-Eleven, Keeta, Foodpanda, ParknShop, Wellcome, HKTVmall, Uber 等）。
+
+請擷取並返回 JSON 結構資料：
+1. amount: 數字，代表消費總金額 (Total amount / Total paid)。請忽視 HK$, $ 或貨幣符號。
+2. date: 字串，格式固定為 YYYY-MM-DD。若圖片無年份，以今年(${new Date().getFullYear()})計算。如果找不到日期請用今天日期 (${getFormattedDate(0)})。
+3. category: 必須從 ['餐飲飲食', '交通出行', '網上消費', '購物消費', '居家日常', '休閒娛樂', '醫療健康', '其他支出'] 中選擇最相符的一項。英文關鍵字對應指南：
+   - Dining / Food / Restaurant / Takeaway -> 餐飲飲食
+   - Transport / Taxi / Octopus / Bus / Petrol -> 交通出行
+   - Online / E-commerce / Subscription -> 網上消費
+   - Supermarket / Retail / Clothes -> 購物消費
+4. subcategory: 子分類字串。
+   - 若 category 為 '餐飲飲食'，必須從 ['堂食', '外賣自取', 'Keeta', 'FoodPanda', '其他飲食'] 選擇（若圖片出現 Keeta 或 Foodpanda 優先選擇；若有 Dine-in 選擇堂食；Takeaway 選擇外賣自取）。
+   - 若 category 為 '交通出行'，必須從 ['八達通', '的士', '巴士/地鐵', '私家車/加油', '其他交通'] 選擇。
+   - 若 category 為 '網上消費'，必須從 ['HKTVmall', '淘寶/天貓', 'Amazon', '訂閱服務', '其他網購'] 選擇。
+   - 其他類別此欄留空即可。
+5. note: 字串，商店名稱或購買的主商品項目描述（英文商店請保留英文名稱，例如 "McDonald's", "Starbucks"）。`;
+
+            const payload = {
+                contents: [{
+                    role: "user",
+                    parts: [
+                        { text: prompt },
+                        {
+                            inlineData: {
+                                mimeType: mimeType,
+                                data: base64Data
+                            }
+                        }
+                    ]
+                }],
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: {
+                        type: "OBJECT",
+                        properties: {
+                            amount: { type: "NUMBER" },
+                            category: { 
+                                type: "STRING", 
+                                enum: ["餐飲飲食", "交通出行", "網上消費", "購物消費", "居家日常", "休閒娛樂", "醫療健康", "其他支出"] 
+                            },
+                            subcategory: { type: "STRING" },
+                            date: { type: "STRING" },
+                            note: { type: "STRING" }
+                        },
+                        propertyOrdering: ["amount", "category", "subcategory", "date", "note"]
+                    }
+                }
+            };
+
+            const apiKey = "";
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+
+            // 指數退避重試邏輯
+            let delay = 1000;
+            for (let attempt = 0; attempt < 3; attempt++) {
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP Error: ${response.status}`);
+                    }
+
+                    const result = await response.json();
+                    const textResult = result.candidates?.[0]?.content?.parts?.[0]?.text;
+                    if (textResult) {
+                        return JSON.parse(textResult);
+                    }
+                } catch (error) {
+                    if (attempt === 2) throw error;
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+            return null;
+        }
+
+        // 儲存資料至 LocalStorage 並自動觸發雲端同步
+        function saveData(triggerAutoSync = true) {
+            localStorage.setItem('my_transactions', JSON.stringify(transactions));
+            if (triggerAutoSync) {
+                syncToCloud(true);
+            }
+        }
+
+        // --- 核心渲染邏輯 ---
+        function render() {
+            const listEl = document.getElementById('transactionList');
+            const emptyEl = document.getElementById('emptyState');
+            const searchKeyword = document.getElementById('searchInput').value.toLowerCase();
+
+            // 1. 篩選與搜尋資料
+            const filtered = transactions.filter(t => {
+                const matchesFilter = currentFilter === 'all' || t.type === currentFilter;
+                const subStr = t.subcategory ? String(t.subcategory).toLowerCase() : '';
+                const matchesSearch = t.note.toLowerCase().includes(searchKeyword) || 
+                                      t.category.toLowerCase().includes(searchKeyword) ||
+                                      subStr.includes(searchKeyword);
+                return matchesFilter && matchesSearch;
+            });
+
+            // 2. 渲染交易明細列表
+            listEl.innerHTML = '';
+            if (filtered.length === 0) {
+                emptyEl.classList.remove('hidden');
+            } else {
+                emptyEl.classList.add('hidden');
+                filtered.forEach(item => {
+                    const catObj = [...CATEGORIES.expense, ...CATEGORIES.income].find(c => c.name === item.category) || { icon: 'tag', color: '#64748b' };
+                    const isExpense = item.type === 'expense';
+
+                    const itemEl = document.createElement('div');
+                    itemEl.className = "flex items-center justify-between p-3.5 bg-slate-50 dark:bg-slate-900/60 hover:bg-slate-100 dark:hover:bg-slate-700/40 border border-slate-100 dark:border-slate-800 rounded-xl transition group";
+                    itemEl.innerHTML = `
+                        <div class="flex items-center space-x-3">
+                            <div class="p-2.5 rounded-xl text-white flex-shrink-0" style="background-color: ${catObj.color}">
+                                <i data-lucide="${catObj.icon}" class="w-4 h-4"></i>
+                            </div>
+                            <div>
+                                <div class="font-medium text-sm text-slate-800 dark:text-slate-100 flex items-center space-x-1.5">
+                                    <span>${escapeHtml(item.note)}</span>
+                                    ${item.subcategory ? `<span class="px-1.5 py-0.5 text-[10px] bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 font-medium rounded-md">${escapeHtml(item.subcategory)}</span>` : ''}
+                                </div>
+                                <div class="text-xs text-slate-400 flex items-center space-x-2 mt-0.5">
+                                    <span>${item.category}</span>
+                                    <span>•</span>
+                                    <span>${item.date}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center space-x-3">
+                            <span class="font-bold text-sm ${isExpense ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}">
+                                ${isExpense ? '-' : '+'}HK$${Number(item.amount).toLocaleString()}
+                            </span>
+                            <button onclick="deleteTransaction(${item.id})" title="刪除紀錄" class="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-rose-500 rounded-lg transition">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `;
+                    listEl.appendChild(itemEl);
+                });
+            }
+
+            // 3. 計算並更新統計資料
+            calculateStats();
+
+            // 4. 更新圖表
+            renderCategoryChart();
+            renderTrendChart();
+
+            // 重建 Lucide 圖示
+            lucide.createIcons();
+        }
+
+        // 防 XSS 攻擊轉義
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
+        // --- 統計數據計算 ---
+        function calculateStats() {
+            const now = new Date();
+            const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            
+            document.getElementById('currentMonthYear').textContent = `${now.getFullYear()} 年 ${now.getMonth() + 1} 月`;
+
+            let totalBal = 0;
+            let monthInc = 0;
+            let monthExp = 0;
+
+            transactions.forEach(t => {
+                const amt = Number(t.amount) || 0;
+                if (t.type === 'income') {
+                    totalBal += amt;
+                    if (String(t.date).startsWith(currentYearMonth)) {
+                        monthInc += amt;
+                    }
+                } else {
+                    totalBal -= amt;
+                    if (String(t.date).startsWith(currentYearMonth)) {
+                        monthExp += amt;
+                    }
+                }
+            });
+
+            // 更新介面
+            document.getElementById('totalBalance').textContent = `HK$${totalBal.toLocaleString()}`;
+            document.getElementById('monthIncome').textContent = `+HK$${monthInc.toLocaleString()}`;
+            document.getElementById('monthExpense').textContent = `-HK$${monthExp.toLocaleString()}`;
+
+            // 更新預算進度
+            const budgetPercent = Math.min(Math.round((monthExp / monthlyBudget) * 100), 100);
+            document.getElementById('budgetPercent').textContent = `${budgetPercent}%`;
+            
+            const budgetBar = document.getElementById('budgetBar');
+            budgetBar.style.width = `${budgetPercent}%`;
+            if (budgetPercent > 90) {
+                budgetBar.className = "bg-rose-600 h-1.5 rounded-full transition-all duration-300";
+            } else if (budgetPercent > 70) {
+                budgetBar.className = "bg-amber-500 h-1.5 rounded-full transition-all duration-300";
+            } else {
+                budgetBar.className = "bg-brand-500 h-1.5 rounded-full transition-all duration-300";
+            }
+        }
+
+        // --- 圖表 1：支出類別圓餅圖 ---
+        function renderCategoryChart() {
+            const ctx = document.getElementById('categoryChart').getContext('2d');
+            const now = new Date();
+            const currentYearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+            // 統計當月各分類支出
+            const categorySums = {};
+            transactions.filter(t => t.type === 'expense' && String(t.date).startsWith(currentYearMonth)).forEach(t => {
+                categorySums[t.category] = (categorySums[t.category] || 0) + Number(t.amount);
+            });
+
+            const labels = Object.keys(categorySums);
+            const data = Object.values(categorySums);
+
+            // 取得對應顏色
+            const bgColors = labels.map(label => {
+                const cat = CATEGORIES.expense.find(c => c.name === label);
+                return cat ? cat.color : '#64748b';
+            });
+
+            if (pieChartInstance) {
+                pieChartInstance.destroy();
+            }
+
+            if (labels.length === 0) {
+                // 無資料狀態畫圓
+                pieChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['尚無支出數據'],
+                        datasets: [{
+                            data: [1],
+                            backgroundColor: ['#e2e8f0']
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                });
+                return;
+            }
+
+            pieChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: bgColors,
+                        borderWidth: 2,
+                        borderColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                boxWidth: 12,
+                                color: document.documentElement.classList.contains('dark') ? '#cbd5e1' : '#475569',
+                                font: { family: 'Noto Sans TC', size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 圖表 2：近 7 天收支趨勢折線圖 ---
+        function renderTrendChart() {
+            const ctx = document.getElementById('trendChart').getContext('2d');
+            
+            // 取得最近 7 天的日期標籤
+            const dates = [];
+            for (let i = 6; i >= 0; i--) {
+                dates.push(getFormattedDate(i));
+            }
+
+            const expenseData = dates.map(d => {
+                return transactions
+                    .filter(t => t.type === 'expense' && String(t.date) === d)
+                    .reduce((sum, t) => sum + Number(t.amount), 0);
+            });
+
+            const incomeData = dates.map(d => {
+                return transactions
+                    .filter(t => t.type === 'income' && String(t.date) === d)
+                    .reduce((sum, t) => sum + Number(t.amount), 0);
+            });
+
+            // 日期顯示簡化 (MM/DD)
+            const displayLabels = dates.map(d => d.slice(5));
+
+            if (lineChartInstance) {
+                lineChartInstance.destroy();
+            }
+
+            lineChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: displayLabels,
+                    datasets: [
+                        {
+                            label: '支出',
+                            data: expenseData,
+                            borderColor: '#f43f5e',
+                            backgroundColor: 'rgba(244, 63, 94, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: '收入',
+                            data: incomeData,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b' }
+                        },
+                        y: {
+                            grid: { color: document.documentElement.classList.contains('dark') ? '#334155' : '#f1f5f9' },
+                            ticks: { color: document.documentElement.classList.contains('dark') ? '#94a3b8' : '#64748b' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            align: 'end',
+                            labels: {
+                                boxWidth: 10,
+                                color: document.documentElement.classList.contains('dark') ? '#cbd5e1' : '#475569',
+                                font: { family: 'Noto Sans TC', size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // --- 歷史明細過濾設定 ---
+        function setFilter(filter) {
+            currentFilter = filter;
+            ['all', 'expense', 'income'].forEach(f => {
+                const btn = document.getElementById(`filter-${f}`);
+                if (f === filter) {
+                    btn.className = "px-3 py-1.5 rounded-xl border border-brand-500 bg-brand-500 text-white font-medium shrink-0 transition";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 text-slate-600 dark:text-slate-300 shrink-0 transition";
+                }
+            });
+            render();
+        }
+
+        // --- 修改預算 Prompt ---
+        function promptSetBudget() {
+            const val = prompt('請輸入每月預算目標金額 (HK$)：', monthlyBudget);
+            if (val !== null && !isNaN(val) && Number(val) > 0) {
+                monthlyBudget = Number(val);
+                localStorage.setItem('my_budget', monthlyBudget);
+                updateBudgetUI();
+                calculateStats();
+                showToast('預算設定已更新！');
+            }
+        }
+
+        function updateBudgetUI() {
+            document.getElementById('currentBudgetLabel').textContent = `當前設定：HK$${monthlyBudget.toLocaleString()}`;
+        }
+
+        // --- 資料匯出 (JSON) ---
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(transactions, null, 2));
+            const dlAnchorElem = document.createElement('a');
+            dlAnchorElem.setAttribute("href", dataStr);
+            dlAnchorElem.setAttribute("download", `記帳備份_${getFormattedDate()}.json`);
+            dlAnchorElem.click();
+            showToast('JSON 備份檔已開始下載');
+        }
+
+        // --- 資料匯出 (CSV) ---
+        function exportCSV() {
+            if (transactions.length === 0) {
+                showToast('目前沒有資料可匯出！');
+                return;
+            }
+            let csvContent = "\uFEFF日期,類型,分類,子分類,金額(HKD),備註\n";
+            transactions.forEach(t => {
+                const typeText = t.type === 'expense' ? '支出' : '收入';
+                const subCat = t.subcategory || '';
+                csvContent += `"${t.date}","${typeText}","${t.category}","${subCat}","${t.amount}","${t.note}"\n`;
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            link.setAttribute("href", url);
+            link.setAttribute("download", `記帳報表_${getFormattedDate()}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('CSV 報表檔已開始下載');
+        }
+
+        // --- 暗黑模式切換 ---
+        function initTheme() {
+            const themeToggleBtn = document.getElementById('themeToggle');
+            const themeIcon = document.getElementById('themeIcon');
+            
+            const isDark = localStorage.getItem('theme') === 'dark' || 
+                (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+
+            if (isDark) {
+                document.documentElement.classList.add('dark');
+                themeIcon.setAttribute('data-lucide', 'sun');
+            } else {
+                document.documentElement.classList.remove('dark');
+                themeIcon.setAttribute('data-lucide', 'moon');
+            }
+
+            themeToggleBtn.addEventListener('click', () => {
+                if (document.documentElement.classList.contains('dark')) {
+                    document.documentElement.classList.remove('dark');
+                    localStorage.setItem('theme', 'light');
+                    themeIcon.setAttribute('data-lucide', 'moon');
+                } else {
+                    document.documentElement.classList.add('dark');
+                    localStorage.setItem('theme', 'dark');
+                    themeIcon.setAttribute('data-lucide', 'sun');
+                }
+                lucide.createIcons();
+                // 重新渲染圖表以更新文字顏色
+                renderCategoryChart();
+                renderTrendChart();
+            });
+        }
+
+        // --- Toast 提示通知 ---
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.textContent = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
