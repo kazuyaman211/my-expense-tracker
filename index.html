@@ -44,8 +44,53 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-200">
 
-    <!-- 主頁面容器 -->
-    <div class="max-w-5xl mx-auto px-4 py-6 md:py-10">
+    <!-- 登入驗證全螢幕遮罩/頁面 -->
+    <div id="loginOverlay" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md">
+        <div class="bg-white dark:bg-slate-800 w-full max-w-md rounded-3xl p-8 shadow-2xl border border-slate-100 dark:border-slate-700 space-y-6">
+            <div class="text-center space-y-2">
+                <div class="w-16 h-16 bg-brand-500 text-white rounded-2xl flex items-center justify-center mx-auto shadow-lg shadow-brand-500/30">
+                    <i data-lucide="lock" class="w-8 h-8"></i>
+                </div>
+                <h2 class="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">使用者身份驗證</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">請輸入您的帳號密碼以進入個人記帳系統</p>
+            </div>
+
+            <!-- エラー訊息提示 -->
+            <div id="loginErrorMsg" class="hidden p-3 rounded-xl bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800/50 text-rose-600 dark:text-rose-400 text-xs text-center font-medium">
+                帳號或密碼錯誤，請重新輸入
+            </div>
+
+            <form id="loginForm" onsubmit="handleLogin(event)" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">使用者名稱</label>
+                    <div class="relative">
+                        <i data-lucide="user" class="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400"></i>
+                        <input type="text" id="loginUsername" required placeholder="請輸入使用者名稱" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1">密碼</label>
+                    <div class="relative">
+                        <i data-lucide="key-round" class="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400"></i>
+                        <input type="password" id="loginPassword" required placeholder="請輸入密碼" class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-brand-500 text-sm">
+                    </div>
+                </div>
+
+                <button type="submit" class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl shadow-lg shadow-brand-500/30 transition flex items-center justify-center space-x-2">
+                    <i data-lucide="log-in" class="w-5 h-5"></i>
+                    <span>安全登入</span>
+                </button>
+            </form>
+
+            <div class="text-center pt-2">
+                <p class="text-[11px] text-slate-400">提示：預設帳號為 <code class="bg-slate-100 dark:bg-slate-700 px-1 py-0.5 rounded text-brand-600 dark:text-brand-400 font-mono">kazu</code> / 密碼為 <code class="bg-slate-100 dark:bg-slate-700 px-1 py-0.5 rounded text-brand-600 dark:text-brand-400 font-mono">kkazuu</code></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主頁面容器 (未登入時隱藏) -->
+    <div id="mainAppContainer" class="hidden max-w-5xl mx-auto px-4 py-6 md:py-10">
 
         <!-- 頂部導覽列 -->
         <header class="flex justify-between items-center mb-8">
@@ -66,6 +111,14 @@
                 </div>
             </div>
             <div class="flex items-center space-x-2">
+                <!-- 登入使用者身分與登出按鈕 -->
+                <div class="hidden sm:flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 mr-1">
+                    <i data-lucide="user-check" class="w-4 h-4 text-emerald-500"></i>
+                    <span class="text-xs font-bold text-slate-700 dark:text-slate-200" id="currentAuthUser">kazu</span>
+                </div>
+                <button onclick="handleLogout()" title="登出系統" class="p-2.5 rounded-xl border border-rose-200 dark:border-rose-900/50 hover:bg-rose-50 dark:hover:bg-rose-950/50 text-rose-600 dark:text-rose-400 transition">
+                    <i data-lucide="log-out" class="w-5 h-5"></i>
+                </button>
                 <!-- Google Sheets 雲端同步按鈕 -->
                 <button onclick="openSyncModal()" title="Google 試算表雲端同步設定" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-indigo-600 dark:text-indigo-400 relative">
                     <i data-lucide="cloud-cog" class="w-5 h-5"></i>
@@ -433,6 +486,53 @@
     </div>
 
     <script>
+        // 預設登入帳號密碼憑證
+        const AUTH_USER = 'kazu';
+        const AUTH_PASS = 'kkazuu';
+
+        // 檢查並更新登入狀態
+        function checkAuthStatus() {
+            const isAuth = localStorage.getItem('is_authenticated') === 'true';
+            const loginOverlay = document.getElementById('loginOverlay');
+            const mainAppContainer = document.getElementById('mainAppContainer');
+
+            if (isAuth) {
+                loginOverlay.classList.add('hidden');
+                mainAppContainer.classList.remove('hidden');
+            } else {
+                loginOverlay.classList.remove('hidden');
+                mainAppContainer.classList.add('hidden');
+            }
+        }
+
+        // 處理登入提交
+        function handleLogin(e) {
+            e.preventDefault();
+            const user = document.getElementById('loginUsername').value.trim();
+            const pass = document.getElementById('loginPassword').value.trim();
+            const errorMsg = document.getElementById('loginErrorMsg');
+
+            if (user === AUTH_USER && pass === AUTH_PASS) {
+                localStorage.setItem('is_authenticated', 'true');
+                localStorage.setItem('auth_user', user);
+                errorMsg.classList.add('hidden');
+                checkAuthStatus();
+                showToast(`✨ 歡迎回來，${user}！登入成功`);
+            } else {
+                errorMsg.classList.remove('hidden');
+            }
+        }
+
+        // 處理登出
+        function handleLogout() {
+            localStorage.removeItem('is_authenticated');
+            localStorage.removeItem('auth_user');
+            document.getElementById('loginUsername').value = '';
+            document.getElementById('loginPassword').value = '';
+            checkAuthStatus();
+            showToast('已安全登出系統');
+        }
+
         // 預設 Google Apps Script API 網址
         const DEFAULT_GAS_URL = 'https://script.google.com/macros/s/AKfycbyi0cXga8giVS7J2vMjhouzluhitibOxTFTDCRgjFYv74O8Z74O5W0AbjF_IpwYkEauSQ/exec';
 
@@ -652,6 +752,7 @@
 
         // --- 初始化頁面 ---
         document.addEventListener('DOMContentLoaded', () => {
+            checkAuthStatus();
             document.getElementById('dateInput').value = getFormattedDate(0);
             initTheme();
             updateBudgetUI();
