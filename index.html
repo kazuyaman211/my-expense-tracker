@@ -93,10 +93,16 @@
                     <i data-lucide="coins" class="w-32 h-32"></i>
                 </div>
                 <div class="text-xs text-brand-100 font-medium mb-1 flex items-center justify-between">
-                    <span><span id="balanceYear">2026</span> 年度累積結餘 (折合HKD)</span>
+                    <div class="flex items-center space-x-1.5">
+                        <!-- 可選擇年度之下拉選單 -->
+                        <select id="selectedYearSelect" onchange="handleYearChange(this.value)" class="bg-white/20 hover:bg-white/30 text-white font-bold border border-white/30 rounded-lg px-2 py-0.5 outline-none cursor-pointer text-xs transition backdrop-blur-sm">
+                            <!-- 動態生成的年份選項 -->
+                        </select>
+                        <span>年度累積結餘 (折合HKD)</span>
+                    </div>
                     <span class="text-[10px] bg-white/20 backdrop-blur-sm px-1.5 py-0.5 rounded font-normal">1月1日 - 12月31日</span>
                 </div>
-                <div class="text-3xl font-extrabold tracking-tight" id="totalBalance">HK$0</div>
+                <div class="text-3xl font-extrabold tracking-tight mt-1" id="totalBalance">HK$0</div>
                 <div class="mt-4 flex items-center text-xs text-brand-100">
                     <i data-lucide="calendar" class="w-4 h-4 mr-1"></i>
                     <span id="currentMonthYear">-- 年 -- 月</span>
@@ -447,12 +453,10 @@
         function cleanDateString(dateVal) {
             if (!dateVal) return getFormattedDate(0);
             const str = String(dateVal).trim();
-            // 如果含時間 T 或空格，取前半段
             const datePart = str.split('T')[0].split(' ')[0];
             if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
                 return datePart;
             }
-            // 嘗試解析 Date 物件
             const d = new Date(str);
             if (!isNaN(d.getTime())) {
                 const yyyy = d.getFullYear();
@@ -507,7 +511,6 @@
             if (!isSilent) showToast('正在同步資料至 Google 試算表...');
             updateSyncBadge('syncing', '雲端同步中...');
 
-            // 確保送出前的日期全部格式化為 YYYY-MM-DD
             const cleanTransactions = transactions.map(t => ({
                 ...t,
                 date: cleanDateString(t.date)
@@ -554,6 +557,7 @@
                         amountHkd: item.amountHkd !== undefined ? Number(item.amountHkd) : Number(item.amount)
                     }));
                     saveData(false);
+                    updateYearOptions();
                     renderCalendar();
                     render();
                     updateSyncBadge('success', '資料庫已同步');
@@ -627,6 +631,7 @@
         let currentType = 'expense';
         let currentFilter = 'all';
         let monthlyBudget = Number(localStorage.getItem('my_budget')) || 20000;
+        let selectedBalanceYear = new Date().getFullYear(); // 選取的累積結餘年份
         let pieChartInstance = null;
         let lineChartInstance = null;
 
@@ -652,6 +657,7 @@
             updateBudgetUI();
             updateCategoryOptions();
             handleCurrencyChange();
+            updateYearOptions();
             renderCalendar();
             render();
             syncFromCloud(true);
@@ -659,6 +665,43 @@
             document.getElementById('transactionForm').addEventListener('submit', handleFormSubmit);
             lucide.createIcons();
         });
+
+        // --- 動態生成並更新年份選單 ---
+        function updateYearOptions() {
+            const yearSelect = document.getElementById('selectedYearSelect');
+            if (!yearSelect) return;
+
+            const currentYear = new Date().getFullYear();
+            const yearsSet = new Set([currentYear]);
+
+            transactions.forEach(t => {
+                const cleanDate = cleanDateString(t.date);
+                const y = parseInt(cleanDate.split('-')[0], 10);
+                if (!isNaN(y)) {
+                    yearsSet.add(y);
+                }
+            });
+
+            const sortedYears = Array.from(yearsSet).sort((a, b) => b - a);
+
+            yearSelect.innerHTML = '';
+            sortedYears.forEach(y => {
+                const opt = document.createElement('option');
+                opt.value = y;
+                opt.textContent = `${y} 年`;
+                opt.className = 'text-slate-800 bg-white dark:bg-slate-800 dark:text-slate-100';
+                if (y === selectedBalanceYear) {
+                    opt.selected = true;
+                }
+                yearSelect.appendChild(opt);
+            });
+        }
+
+        // 當切換年份選單時 trigger
+        function handleYearChange(val) {
+            selectedBalanceYear = parseInt(val, 10);
+            calculateStats();
+        }
 
         // --- 幣種切換與港幣自動換算處理 ---
         function handleCurrencyChange() {
@@ -787,6 +830,7 @@
 
             transactions.unshift(newTransaction);
             saveData(true);
+            updateYearOptions();
             renderCalendar();
             render();
 
@@ -801,6 +845,7 @@
         function deleteTransaction(id) {
             transactions = transactions.filter(t => t.id !== id);
             saveData(true);
+            updateYearOptions();
             renderCalendar();
             render();
             showToast('紀錄已刪除並同步資料庫');
@@ -1234,16 +1279,16 @@
             return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
-        // --- 統計數據計算 (解決雲端同步日期格式差異歸零問題) ---
+        // --- 統計數據計算 (可依選取年份計算全年累積結餘) ---
         function calculateStats() {
             const now = new Date();
             const realCurrentYear = now.getFullYear();
             const realCurrentMonth = now.getMonth() + 1; // 1 - 12
             
-            const realYearStr = String(realCurrentYear);
-            const realYearMonthStr = `${realYearStr}-${String(realCurrentMonth).padStart(2, '0')}`;
+            if (!selectedBalanceYear) selectedBalanceYear = realCurrentYear;
+            const targetYearStr = String(selectedBalanceYear);
+            const realYearMonthStr = `${realCurrentYear}-${String(realCurrentMonth).padStart(2, '0')}`;
 
-            document.getElementById('balanceYear').textContent = realCurrentYear;
             document.getElementById('currentMonthYear').textContent = `${realCurrentYear} 年 ${realCurrentMonth} 月`;
 
             let yearlyBalHkd = 0;
@@ -1254,8 +1299,8 @@
                 const valHkd = t.amountHkd !== undefined ? Number(t.amountHkd) : Number(t.amount) || 0;
                 const cleanDate = cleanDateString(t.date);
 
-                // 1. 年度總結餘 (當年1月1日 至 12月31日)
-                if (cleanDate.startsWith(realYearStr)) {
+                // 1. 指定選取年度之總結餘 (該年1月1日 至 12月31日)
+                if (cleanDate.startsWith(targetYearStr)) {
                     if (t.type === 'income') {
                         yearlyBalHkd += valHkd;
                     } else {
@@ -1524,7 +1569,7 @@
             themeToggleBtn.addEventListener('click', () => {
                 if (document.documentElement.classList.contains('dark')) {
                     document.documentElement.classList.remove('dark');
-                    localStorage.setItem('theme', 'light');
+                    localStorage.setItem('theme', 'dark');
                     themeIcon.setAttribute('data-lucide', 'moon');
                 } else {
                     document.documentElement.classList.add('dark');
