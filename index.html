@@ -199,9 +199,16 @@
                     <span class="text-[10px] bg-white/20 backdrop-blur-sm px-1.5 py-0.5 rounded font-normal">1月1日 - 12月31日</span>
                 </div>
                 <div class="text-3xl font-extrabold tracking-tight" id="totalBalance">HK$0</div>
-                <div class="mt-4 flex items-center text-xs text-brand-100">
-                    <i data-lucide="calendar" class="w-4 h-4 mr-1"></i>
-                    <span id="currentMonthYear">-- 年 -- 月</span>
+                <div class="mt-4 flex items-center justify-between text-xs border-t border-white/10 pt-2.5">
+                    <div class="flex items-center text-brand-100">
+                        <i data-lucide="calendar" class="w-4 h-4 mr-1"></i>
+                        <span id="currentMonthYear">-- 年 -- 月</span>
+                    </div>
+                    <!-- 當月結餘展示區 -->
+                    <div class="flex items-center space-x-1">
+                        <span class="text-brand-100/90 text-[11px]">當月結餘：</span>
+                        <span id="monthBalance" class="px-2 py-0.5 rounded-lg text-xs font-bold bg-emerald-500/25 text-emerald-300 border border-emerald-400/30">+HK$0</span>
+                    </div>
                 </div>
             </div>
 
@@ -1444,6 +1451,19 @@
             document.getElementById('totalBalance').textContent = `HK$${yearlyBalHkd.toLocaleString()}`;
             document.getElementById('monthIncome').textContent = `+HK$${monthIncHkd.toLocaleString()}`;
             document.getElementById('monthExpense').textContent = `-HK$${monthExpHkd.toLocaleString()}`;
+
+            // 計算當月淨結餘 (當月總收入 - 當月總支出)
+            const monthNetHkd = monthIncHkd - monthExpHkd;
+            const monthBalEl = document.getElementById('monthBalance');
+            if (monthBalEl) {
+                const sign = monthNetHkd > 0 ? '+' : '';
+                monthBalEl.textContent = `${sign}HK$${monthNetHkd.toLocaleString()}`;
+                if (monthNetHkd >= 0) {
+                    monthBalEl.className = "px-2 py-0.5 rounded-lg text-xs font-bold bg-emerald-500/25 text-emerald-300 border border-emerald-400/30";
+                } else {
+                    monthBalEl.className = "px-2 py-0.5 rounded-lg text-xs font-bold bg-rose-500/25 text-rose-300 border border-rose-400/30";
+                }
+            }
 
             const budgetPercent = Math.min(Math.round((monthExpHkd / monthlyBudget) * 100), 100);
             document.getElementById('budgetPercent').textContent = `${budgetPercent}%`;
