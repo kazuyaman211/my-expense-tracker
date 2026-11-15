@@ -551,6 +551,7 @@
             if (confirm('確定要登出個人記帳系統嗎？')) {
                 localStorage.removeItem(AUTH_KEY);
                 transactions = [];
+                isCloudLoaded = false;
                 checkAuth();
                 showToast('已安全登出');
             }
@@ -605,7 +606,6 @@
             }
         }
 
-        // --- Google 試算表單筆即時操作邏輯 (不觸發全表重寫或重拉) ---
         let isCloudLoaded = false;
 
         function openSyncModal() {
@@ -678,11 +678,19 @@
             });
         }
 
-        // 完整覆蓋寫入 (僅供設定視窗手動緊急覆蓋使用)
+        // 完整覆蓋寫入 (明確帶 replace_all 指令且禁止空資料覆蓋)
         function forceFullSyncToCloud() {
             const url = getGasUrl();
             if (!url) return;
-            if (!confirm('確定要將目前畫面上的所有資料完整覆蓋寫入 Google 試算表嗎？')) return;
+            if (!isCloudLoaded) {
+                showToast('請先等待試算表資料載入完成！');
+                return;
+            }
+            if (transactions.length === 0) {
+                if (!confirm('警告：目前畫面上没有任何資料，確定要清空 Google 試算表嗎？')) return;
+            } else {
+                if (!confirm('確定要將目前畫面上的所有資料完整覆蓋寫入 Google 試算表嗎？')) return;
+            }
 
             showToast('正在完整覆蓋寫入試算表...');
             updateSyncBadge('syncing', '完整寫入中...');
@@ -696,7 +704,10 @@
                 method: 'POST',
                 mode: 'no-cors',
                 headers: { 'Content-Type': 'text/plain' },
-                body: JSON.stringify(cleanTransactions)
+                body: JSON.stringify({
+                    action: 'replace_all',
+                    items: cleanTransactions
+                })
             }).then(() => {
                 updateSyncBadge('success', '完整寫入完成');
                 showToast('✨ 已完整覆蓋寫入 Google 試算表！');
@@ -953,6 +964,11 @@
         function handleFormSubmit(e) {
             e.preventDefault();
 
+            if (!isCloudLoaded) {
+                showToast('資料尚未從試算表載入完成，請稍候...');
+                return;
+            }
+
             const currency = document.getElementById('currencySelect').value;
             const amount = parseFloat(document.getElementById('amountInput').value);
             const category = document.getElementById('categorySelect').value;
@@ -989,7 +1005,7 @@
             };
 
             transactions.unshift(newTransaction);
-            sendAddToSheet(newTransaction); // 僅新增此筆至試算表，不做全表同步
+            sendAddToSheet(newTransaction);
             updateYearSelectOptions();
             renderCalendar();
             render();
@@ -1003,8 +1019,12 @@
 
         // --- 刪除紀錄：立即更新畫面並單筆從試算表刪除 ---
         function deleteTransaction(id) {
-            transactions = transactions.filter(t => t.id !== id);
-            sendDeleteToSheet(id); // 僅刪除此筆 ID，不做全表同步
+            if (!isCloudLoaded) {
+                showToast('資料尚未載入完成，無法刪除');
+                return;
+            }
+            transactions = transactions.filter(t => String(t.id) !== String(id));
+            sendDeleteToSheet(id);
             updateYearSelectOptions();
             renderCalendar();
             render();
