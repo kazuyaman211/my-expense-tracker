@@ -16,7 +16,6 @@
     <!-- iPhone 主畫面專用 App ICON (apple-touch-icon) -->
     <link rel="apple-touch-icon" id="appleTouchIcon" sizes="180x180" href="">
 
-    <!-- 內嵌動態生成 iPhone 高解析度 PNG App 圖示腳本 -->
     <script>
         (function generateAppleTouchIcon() {
             try {
@@ -95,7 +94,7 @@
 </head>
 <body class="bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 min-h-screen transition-colors duration-200 pb-10">
 
-    <!-- 登入驗證視圖 (預設未登入時顯示) -->
+    <!-- 登入驗證視圖 -->
     <div id="loginView" class="fixed inset-0 z-50 bg-slate-900/90 backdrop-blur-md flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-800 rounded-3xl max-w-sm w-full p-8 shadow-2xl border border-slate-100 dark:border-slate-700 space-y-6 text-center">
             
@@ -130,7 +129,7 @@
         </div>
     </div>
 
-    <!-- 主應用程式介面 (登入後解鎖) -->
+    <!-- 主應用程式介面 -->
     <div id="appView" class="hidden max-w-5xl mx-auto px-4 py-6 md:py-10">
 
         <!-- 頂部導覽列 -->
@@ -142,17 +141,15 @@
                 <div>
                     <div class="flex items-center space-x-2">
                         <h1 class="text-2xl font-bold tracking-tight">日常記帳本</h1>
-                        <!-- 雲端狀態標籤 -->
                         <span id="syncStatusBadge" class="inline-flex items-center space-x-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400">
                             <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                            <span id="syncStatusText">載入雲端資料中...</span>
+                            <span id="syncStatusText">載入年月工作表中...</span>
                         </span>
                     </div>
-                    <p class="text-xs text-slate-500 dark:text-slate-400">即時單筆寫入 • 啟動或手動檢查同步</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">按年月工作表自動分類讀寫</p>
                 </div>
             </div>
             <div class="flex items-center space-x-2">
-                <!-- 登入身分標籤與登出按鈕 -->
                 <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-xs font-medium text-slate-600 dark:text-slate-300">
                     <i data-lucide="user" class="w-3.5 h-3.5 text-brand-500"></i>
                     <span id="currentUserLabel">kazu</span>
@@ -160,19 +157,15 @@
                 <button onclick="handleLogout()" title="登出" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 transition">
                     <i data-lucide="log-out" class="w-5 h-5"></i>
                 </button>
-                <!-- 手動同步檢查按鈕 -->
-                <button onclick="syncFromCloud(false)" title="手動檢查並同步 Google 試算表資料" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-emerald-600 dark:text-emerald-400">
+                <button onclick="syncFromCloud(false)" title="手動同步檢查年月工作表資料" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-emerald-600 dark:text-emerald-400">
                     <i data-lucide="refresh-cw" class="w-5 h-5"></i>
                 </button>
-                <!-- Google Sheets 設定按鈕 -->
                 <button onclick="openSyncModal()" title="Google 試算表設定" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition text-indigo-600 dark:text-indigo-400 relative">
                     <i data-lucide="cloud-cog" class="w-5 h-5"></i>
                 </button>
-                <!-- 匯出 CSV -->
                 <button onclick="exportCSV()" title="匯出報表 (CSV)" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
                     <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
                 </button>
-                <!-- 暗黑模式開關 -->
                 <button id="themeToggle" class="p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 transition">
                     <i data-lucide="moon" id="themeIcon" class="w-5 h-5"></i>
                 </button>
@@ -181,7 +174,6 @@
 
         <!-- 總覽卡片區塊 -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <!-- 年度淨資產/結餘 -->
             <div class="bg-gradient-to-br from-brand-600 to-brand-700 text-white rounded-2xl p-5 shadow-lg shadow-brand-600/20 relative overflow-hidden">
                 <div class="absolute -right-4 -bottom-4 opacity-10">
                     <i data-lucide="coins" class="w-32 h-32"></i>
@@ -207,7 +199,6 @@
                 </div>
             </div>
 
-            <!-- 本月總收入 -->
             <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm">
                 <div class="flex justify-between items-start mb-2">
                     <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">本月總收入 (HKD)</span>
@@ -219,7 +210,6 @@
                 <p class="text-xs text-slate-400 dark:text-slate-500 mt-2">持續累積額外收入</p>
             </div>
 
-            <!-- 本月總支出 -->
             <div class="bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 rounded-2xl p-5 shadow-sm">
                 <div class="flex justify-between items-start mb-2">
                     <span class="text-xs text-slate-500 dark:text-slate-400 font-medium">本月總支出 (HKD)</span>
@@ -240,13 +230,10 @@
             </div>
         </div>
 
-        <!-- 主要內容分頁/布局區 -->
+        <!-- 主要內容 -->
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-            <!-- 左側/上方：記帳表單與圖表 (5 欄) -->
             <div class="lg:col-span-5 space-y-6">
-
-                <!-- 1. 新增交易表單 -->
+                <!-- 新增交易表單 -->
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm relative">
                     <div class="flex justify-between items-center mb-4">
                         <h2 class="text-lg font-bold flex items-center">
@@ -309,7 +296,6 @@
                                 <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-amber-600 font-bold text-sm">HK$</span>
                                 <input type="number" id="amountHkdInput" step="any" placeholder="0" class="w-full pl-12 pr-4 py-2 rounded-lg border border-amber-300 dark:border-amber-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-amber-500 text-md font-bold text-amber-900 dark:text-amber-100">
                             </div>
-                            <p class="text-[10px] text-amber-600 dark:text-amber-400">可自由後補修正為銀行卡或電子支付實際扣取的港幣金額。</p>
                         </div>
 
                         <div class="grid grid-cols-2 gap-3">
@@ -337,12 +323,12 @@
 
                         <button type="submit" class="w-full bg-brand-500 hover:bg-brand-600 text-white font-medium py-3 rounded-xl shadow-lg shadow-brand-500/25 transition flex items-center justify-center space-x-2">
                             <i data-lucide="plus" class="w-5 h-5"></i>
-                            <span>即時新增至 Google 試算表</span>
+                            <span>新增至對應年月工作表</span>
                         </button>
                     </form>
                 </div>
 
-                <!-- 2. 圖表分析卡片 -->
+                <!-- 類別統計圖表 -->
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm">
                     <h2 class="text-lg font-bold mb-4 flex items-center">
                         <i data-lucide="pie-chart" class="w-5 h-5 mr-2 text-brand-500"></i>
@@ -353,7 +339,7 @@
                     </div>
                 </div>
 
-                <!-- 3. 設定預算模組 -->
+                <!-- 預算設定 -->
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-5 border border-slate-100 dark:border-slate-700/50 shadow-sm">
                     <div class="flex justify-between items-center">
                         <div>
@@ -365,13 +351,11 @@
                         </button>
                     </div>
                 </div>
-
             </div>
 
-            <!-- 右側/下方：明細清單與過濾搜尋 (7 欄) -->
+            <!-- 右側 -->
             <div class="lg:col-span-7 space-y-6">
-
-                <!-- 月曆視圖卡片 -->
+                <!-- 月曆視圖 -->
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm">
                     <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-3 mb-4">
                         <div class="flex items-center space-x-2">
@@ -379,13 +363,13 @@
                             <h2 class="text-lg font-bold" id="calendarMonthTitle">----年 --月 月曆總覽</h2>
                         </div>
                         <div class="flex items-center space-x-2">
-                            <button type="button" onclick="changeCalendarMonth(-1)" title="上個月" class="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                            <button type="button" onclick="changeCalendarMonth(-1)" class="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                                 <i data-lucide="chevron-left" class="w-4 h-4"></i>
                             </button>
                             <button type="button" onclick="resetCalendarMonth()" class="px-3 py-1.5 text-xs font-medium bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-xl transition">
                                 今月
                             </button>
-                            <button type="button" onclick="changeCalendarMonth(1)" title="下個月" class="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
+                            <button type="button" onclick="changeCalendarMonth(1)" class="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-700 transition">
                                 <i data-lucide="chevron-right" class="w-4 h-4"></i>
                             </button>
                         </div>
@@ -410,12 +394,12 @@
                             <span class="text-slate-700 dark:text-slate-200">已篩選日期：<strong id="selectedDateText" class="text-brand-600 dark:text-brand-400 font-bold">2026-08-30</strong></span>
                         </div>
                         <button type="button" onclick="clearDateFilter()" class="text-brand-600 dark:text-brand-400 hover:underline font-medium">
-                            清除篩選 (顯示全部)
+                            清除篩選
                         </button>
                     </div>
                 </div>
 
-                <!-- 交易歷史清單卡片 -->
+                <!-- 交易歷史明細 -->
                 <div class="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 shadow-sm" id="historyCard">
                     <div class="flex flex-col sm:flex-row justify-between sm:items-center gap-4 mb-6">
                         <h2 class="text-lg font-bold flex items-center">
@@ -440,8 +424,8 @@
 
                     <div id="emptyState" class="text-center py-12">
                         <i data-lucide="cloud" class="w-12 h-12 mx-auto text-slate-300 dark:text-slate-600 mb-3 animate-pulse"></i>
-                        <p id="emptyStateText" class="text-slate-500 dark:text-slate-400 text-sm">正在從 Google 試算表載入資料...</p>
-                        <p id="emptyStateSubtext" class="text-xs text-slate-400 dark:text-slate-500 mt-1">請稍候，系統僅在啟動或手動時同步檢查</p>
+                        <p id="emptyStateText" class="text-slate-500 dark:text-slate-400 text-sm">正在讀取所有年月工作表資料...</p>
+                        <p id="emptyStateSubtext" class="text-xs text-slate-400 dark:text-slate-500 mt-1">請稍候</p>
                     </div>
                 </div>
 
@@ -455,26 +439,23 @@
                         <canvas id="trendChart"></canvas>
                     </div>
                 </div>
-
             </div>
-
         </div>
-
     </div>
 
-    <!-- 訊息提示模組 (Toast) -->
+    <!-- 訊息提示 -->
     <div id="toast" class="fixed bottom-5 right-5 transform translate-y-20 opacity-0 transition-all duration-300 bg-slate-900 text-white dark:bg-slate-100 dark:text-slate-900 px-4 py-3 rounded-xl shadow-xl text-sm flex items-center space-x-2 z-50 pointer-events-none">
         <i data-lucide="info" class="w-4 h-4 text-brand-500"></i>
         <span id="toastMsg">提示訊息</span>
     </div>
 
-    <!-- Google 試算表同步設定彈窗 -->
+    <!-- 設定彈窗 -->
     <div id="syncModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 dark:border-slate-700 space-y-5">
             <div class="flex justify-between items-center border-b dark:border-slate-700 pb-3">
                 <h3 class="text-lg font-bold flex items-center text-slate-800 dark:text-slate-100">
                     <i data-lucide="database" class="w-5 h-5 mr-2 text-indigo-500"></i>
-                    Google 試算表資料庫設定
+                    Google 試算表設定
                 </h3>
                 <button onclick="closeSyncModal()" class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
                     <i data-lucide="x" class="w-5 h-5"></i>
@@ -487,14 +468,14 @@
                 </label>
                 <input type="url" id="gasUrlInput" placeholder="https://script.google.com/macros/s/.../exec" class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs font-mono">
                 <p class="text-[11px] text-slate-400 leading-relaxed">
-                    新增與刪除皆直接操作試算表單筆列位。完整同步檢查僅在開啟網頁或手動點擊同步時進行。
+                    系統會依據每筆記錄的日期自動建立及寫入對應的年月工作表（例如 `2026-03`），並自動跨工作表讀取所有歷史數據。
                 </p>
             </div>
 
             <div class="grid grid-cols-2 gap-3 pt-2">
                 <button onclick="syncFromCloud(false)" class="flex items-center justify-center space-x-2 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-medium transition shadow-md shadow-emerald-500/20">
                     <i data-lucide="refresh-cw" class="w-4 h-4"></i>
-                    <span>手動同步檢查</span>
+                    <span>同步檢查工作表</span>
                 </button>
                 <button onclick="forceFullSyncToCloud()" class="flex items-center justify-center space-x-2 py-2.5 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-medium transition shadow-md shadow-indigo-500/20">
                     <i data-lucide="cloud-upload" class="w-4 h-4"></i>
@@ -510,7 +491,6 @@
     <script>
         localStorage.removeItem('my_transactions');
 
-        // --- 登入驗證機制 ---
         const AUTH_KEY = 'my_expense_app_logged_user';
 
         function checkAuth() {
@@ -540,7 +520,7 @@
                 document.getElementById('usernameInput').value = '';
                 document.getElementById('passwordInput').value = '';
                 checkAuth();
-                showToast('登入成功！正在載入 Google 試算表資料...');
+                showToast('登入成功！正在讀取年月工作表數據...');
                 syncFromCloud(true);
             } else {
                 errorMsg.classList.remove('hidden');
@@ -620,17 +600,16 @@
         function saveGasUrl() {
             const url = document.getElementById('gasUrlInput').value.trim();
             localStorage.setItem('gas_script_url', url || DEFAULT_GAS_URL);
-            showToast('已儲存 Google 試算表網址設定');
+            showToast('已儲存網址設定');
             closeSyncModal();
             syncFromCloud(false);
         }
 
-        // 單筆即時新增至試算表
         function sendAddToSheet(item) {
             const url = getGasUrl();
             if (!url) return;
 
-            updateSyncBadge('syncing', '正在新增至試算表...');
+            updateSyncBadge('syncing', '正在寫入年月工作表...');
             const payload = JSON.stringify({
                 action: 'add',
                 item: {
@@ -645,20 +624,19 @@
                 headers: { 'Content-Type': 'text/plain' },
                 body: payload
             }).then(() => {
-                updateSyncBadge('success', '已新增至試算表');
+                updateSyncBadge('success', '已寫入年月工作表');
             }).catch(err => {
                 console.error('Add Sheet Error:', err);
                 updateSyncBadge('error', '寫入失敗');
-                showToast('試算表寫入失敗，請檢查網路');
+                showToast('寫入失敗，請檢查網路');
             });
         }
 
-        // 單筆即時從試算表刪除
         function sendDeleteToSheet(id) {
             const url = getGasUrl();
             if (!url) return;
 
-            updateSyncBadge('syncing', '正在從試算表刪除...');
+            updateSyncBadge('syncing', '正在刪除紀錄...');
             const payload = JSON.stringify({
                 action: 'delete',
                 id: id
@@ -670,30 +648,25 @@
                 headers: { 'Content-Type': 'text/plain' },
                 body: payload
             }).then(() => {
-                updateSyncBadge('success', '已從試算表刪除');
+                updateSyncBadge('success', '已刪除紀錄');
             }).catch(err => {
                 console.error('Delete Sheet Error:', err);
                 updateSyncBadge('error', '刪除失敗');
-                showToast('試算表刪除失敗，請檢查網路');
+                showToast('刪除失敗，請檢查網路');
             });
         }
 
-        // 完整覆蓋寫入 (明確帶 replace_all 指令且禁止空資料覆蓋)
         function forceFullSyncToCloud() {
             const url = getGasUrl();
             if (!url) return;
             if (!isCloudLoaded) {
-                showToast('請先等待試算表資料載入完成！');
+                showToast('請先等待資料載入完成！');
                 return;
             }
-            if (transactions.length === 0) {
-                if (!confirm('警告：目前畫面上没有任何資料，確定要清空 Google 試算表嗎？')) return;
-            } else {
-                if (!confirm('確定要將目前畫面上的所有資料完整覆蓋寫入 Google 試算表嗎？')) return;
-            }
+            if (!confirm('確定要將畫面上的所有資料依年月工作表重新整理寫入嗎？')) return;
 
-            showToast('正在完整覆蓋寫入試算表...');
-            updateSyncBadge('syncing', '完整寫入中...');
+            showToast('正在依年月工作表寫入...');
+            updateSyncBadge('syncing', '寫入中...');
 
             const cleanTransactions = transactions.map(t => ({
                 ...t,
@@ -709,23 +682,22 @@
                     items: cleanTransactions
                 })
             }).then(() => {
-                updateSyncBadge('success', '完整寫入完成');
-                showToast('✨ 已完整覆蓋寫入 Google 試算表！');
+                updateSyncBadge('success', '年月工作表同步完成');
+                showToast('✨ 已完成依年月工作表分類寫入！');
                 closeSyncModal();
             }).catch(err => {
                 console.error('Full Sync Error:', err);
                 updateSyncBadge('error', '寫入失敗');
-                showToast('寫入失敗，請檢查網路');
+                showToast('寫入失敗');
             });
         }
 
-        // 從 Google 試算表讀取最新資料 (僅在啟動或手動同步檢查時執行)
         async function syncFromCloud(isSilent = false) {
             const url = getGasUrl();
             if (!url) return;
 
-            if (!isSilent) showToast('正在同步檢查 Google 試算表資料...');
-            updateSyncBadge('syncing', '同步檢查中...');
+            if (!isSilent) showToast('正在讀取所有年月工作表...');
+            updateSyncBadge('syncing', '讀取中...');
 
             try {
                 const fetchUrl = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
@@ -744,26 +716,25 @@
                     updateYearSelectOptions();
                     renderCalendar();
                     render();
-                    updateSyncBadge('success', '試算表已同步');
+                    updateSyncBadge('success', '年月工作表已同步');
                     if (!isSilent) {
-                        showToast('✨ 同步檢查完成，已更新最新數據！');
+                        showToast('✨ 成功讀取所有年月工作表資料！');
                         closeSyncModal();
                     }
                 } else {
                     isCloudLoaded = true;
                     updateSyncBadge('error', '格式錯誤');
-                    if (!isSilent) showToast('讀取失敗：試算表資料格式不符');
+                    if (!isSilent) showToast('讀取失敗：格式不符');
                 }
             } catch (err) {
                 console.error('Cloud Download Error:', err);
                 isCloudLoaded = true;
-                updateSyncBadge('error', '無法連線試算表');
+                updateSyncBadge('error', '無法連線');
                 render();
-                if (!isSilent) showToast('無法讀取 Google 試算表，請確認網路與權限設定');
+                if (!isSilent) showToast('無法讀取工作表，請檢查網路');
             }
         }
 
-        // --- 預設分類與圖示圖例 ---
         const CATEGORIES = {
             expense: [
                 { 
@@ -830,7 +801,6 @@
             return `${yyyy}-${mm}-${dd}`;
         }
 
-        // --- 初始化頁面 (重新打開時自動從試算表拉取) ---
         document.addEventListener('DOMContentLoaded', () => {
             checkAuth();
             document.getElementById('dateInput').value = getFormattedDate(0);
@@ -960,12 +930,11 @@
             }
         }
 
-        // --- 新增紀錄：立即更新畫面並單筆寫入試算表 ---
         function handleFormSubmit(e) {
             e.preventDefault();
 
             if (!isCloudLoaded) {
-                showToast('資料尚未從試算表載入完成，請稍候...');
+                showToast('資料尚未從工作表載入完成，請稍候...');
                 return;
             }
 
@@ -1014,13 +983,13 @@
             document.getElementById('amountHkdInput').value = '';
             document.getElementById('noteInput').value = '';
 
-            showToast('已即時新增至 Google 試算表！');
+            const yyyyMm = cleanDate.substring(0, 7);
+            showToast(`已新增至 [${yyyyMm}] 年月工作表！`);
         }
 
-        // --- 刪除紀錄：立即更新畫面並單筆從試算表刪除 ---
         function deleteTransaction(id) {
             if (!isCloudLoaded) {
-                showToast('資料尚未載入完成，無法刪除');
+                showToast('資料尚未載入完成');
                 return;
             }
             transactions = transactions.filter(t => String(t.id) !== String(id));
@@ -1028,7 +997,7 @@
             updateYearSelectOptions();
             renderCalendar();
             render();
-            showToast('已從 Google 試算表刪除該筆紀錄');
+            showToast('已從工作表中刪除該筆紀錄');
         }
 
         function triggerReceiptUpload() {
@@ -1214,15 +1183,11 @@
                         body: JSON.stringify(payload)
                     });
 
-                    if (!response.ok) {
-                        throw new Error(`HTTP Error: ${response.status}`);
-                    }
+                    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
 
                     const result = await response.json();
                     const textResult = result.candidates?.[0]?.content?.parts?.[0]?.text;
-                    if (textResult) {
-                        return JSON.parse(textResult);
-                    }
+                    if (textResult) return JSON.parse(textResult);
                 } catch (error) {
                     if (attempt === 2) throw error;
                     await new Promise(resolve => setTimeout(resolve, delay));
@@ -1389,11 +1354,11 @@
             if (filtered.length === 0) {
                 emptyEl.classList.remove('hidden');
                 if (!isCloudLoaded) {
-                    emptyTextEl.textContent = "正在從 Google 試算表載入資料...";
-                    emptySubEl.textContent = "請稍候，系統僅在啟動或手動時同步檢查";
+                    emptyTextEl.textContent = "正在讀取所有年月工作表資料...";
+                    emptySubEl.textContent = "請稍候";
                 } else {
                     emptyTextEl.textContent = "目前尚無相關的記帳紀錄";
-                    emptySubEl.textContent = "試算表目前無此區間資料，可從左側新增帳目";
+                    emptySubEl.textContent = "所有年月工作表中無此區間資料";
                 }
             } else {
                 emptyEl.classList.add('hidden');
@@ -1538,19 +1503,14 @@
                 return cat ? cat.color : '#64748b';
             });
 
-            if (pieChartInstance) {
-                pieChartInstance.destroy();
-            }
+            if (pieChartInstance) pieChartInstance.destroy();
 
             if (labels.length === 0) {
                 pieChartInstance = new Chart(ctx, {
                     type: 'doughnut',
                     data: {
                         labels: ['本月尚無支出數據'],
-                        datasets: [{
-                            data: [1],
-                            backgroundColor: ['#e2e8f0']
-                        }]
+                        datasets: [{ data: [1], backgroundColor: ['#e2e8f0'] }]
                     },
                     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
                 });
@@ -1607,9 +1567,7 @@
 
             const displayLabels = dates.map(d => d.slice(5));
 
-            if (lineChartInstance) {
-                lineChartInstance.destroy();
-            }
+            if (lineChartInstance) lineChartInstance.destroy();
 
             lineChartInstance = new Chart(ctx, {
                 type: 'line',
